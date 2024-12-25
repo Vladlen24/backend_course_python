@@ -3,8 +3,8 @@ from fastapi import FastAPI, Query, Body
 app = FastAPI()
 
 hotels = [
-    {"id": 1, "title": "Sochi"},
-    {"id": 2, "title": "Dubai"},
+    {"id": 1, "title": "Sochi", "name": "Hotel_Sochi"},
+    {"id": 2, "title": "Dubai", "name": "Hotel_Dubai"},
 ]
 
 
@@ -29,13 +29,48 @@ def delete_hotel(hotel_id: int):
     hotels = [hotel for hotel in hotels if hotel["id"] != hotel_id]
     return {"status": "OK"}
 
+
 @app.post("/hotels")
 def create_hotel(
-    title: str = Body(embed = True)
+    title: str = Body(embed = True),
+    name: str = Body(embed = True)
 ):
     global hotels
     hotels.append({
         "id": hotels[-1]["id"] + 1,
-        "title": title
+        "title": title,
+        "name": name
     })
+    return {"status": "OK"}
+
+
+@app.put("/hotels/{hotel_id}")
+def edit_full_hotel(
+    hotel_id: int,
+    title: str = Body(embed=True),
+    name: str = Body(embed=True)
+):
+    global hotels
+    for hotel in hotels:
+        if hotel["id"] == hotel_id:
+            hotel["title"] = title
+            hotel["name"] = name
+
+    return {"status": "OK"}
+
+
+@app.patch("/hotels/{hotel_id}")
+def edit_partially_hotel(
+    hotel_id: int,
+    title: str | None = Body(None, embed=True),
+    name: str | None = Body(None, embed=True)
+):
+    global hotels
+    for hotel in hotels:
+        if hotel["id"] == hotel_id:
+            if title:
+                hotel["title"] = title
+            if name: 
+                hotel["name"] = name
+
     return {"status": "OK"}
