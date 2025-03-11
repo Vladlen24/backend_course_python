@@ -1,6 +1,7 @@
 from typing import List
 from fastapi import APIRouter, Query, Body
 from shemas import Hotel, Error
+from dependencies import PaginationDep
 
 router = APIRouter(prefix="/hotels", tags=["Отели"])
 
@@ -17,11 +18,10 @@ hotels = [
 
 @router.get("")
 def get_hotels(
+    pagination: PaginationDep,
     id: int | None = Query(None, description="ID number"),
     title: str | None = Query(None, description="Hotel title"),
-    name: str | None = Query(None, description="Hotel name"),
-    page: int | None = Query(1, description="Page number"),
-    per_page: int | None = Query(3, description="Number of hotels per page")
+    name: str | None = Query(None, description="Hotel name")
 ) -> List[Hotel] | Error:
     
     hotels_ = []
@@ -34,18 +34,17 @@ def get_hotels(
             continue
         hotels_.append(hotel)
     
+    page = pagination.page
+    per_page = pagination.per_page
+
     N = len(hotels_)
-    is_page = True
-    start = (page - 1) * per_page
     if N > page * per_page:
-        end = page * per_page
-    elif N > (page - 1) * per_page:
-        end = N
+        is_page = True
     else:
         is_page = False
 
     if is_page:
-        response = hotels_[start:end]
+        response = hotels_[(page - 1) * per_page:][:per_page]
     else:
         response = {"Error": f"No page {page}"}
 
