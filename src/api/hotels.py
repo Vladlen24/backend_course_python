@@ -1,54 +1,45 @@
 from typing import List
 from fastapi import APIRouter, Query, Body
+from sqlalchemy import insert, select
+
+from src.models.hotels import HotelsOrm
 from src.shemas.hotels import Hotel, Error
 from src.api.dependencies import PaginationDep
+from src.database import async_session_maker, engine
 
 router = APIRouter(prefix="/hotels", tags=["Отели"])
 
-hotels = [
-     {"id": 1, "title": "Sochi", "name": "sochi"},
-     {"id": 2, "title": "Дубай", "name": "dubai"},
-     {"id": 3, "title": "Мальдивы", "name": "maldivi"},
-     {"id": 4, "title": "Геленджик", "name": "gelendzhik"},
-     {"id": 5, "title": "Москва", "name": "moscow"},
-     {"id": 6, "title": "Казань", "name": "kazan"},
-     {"id": 7, "title": "Санкт-Петербург", "name": "spb"},
- ]
 
 
 @router.get("")
-def get_hotels(
+async def get_hotels(
     pagination: PaginationDep,
     id: int | None = Query(None, description="ID number"),
     title: str | None = Query(None, description="Hotel title"),
-    name: str | None = Query(None, description="Hotel name")
 ) -> List[Hotel] | Error:
     
-    hotels_ = []
-    for hotel in hotels:
-        if id and hotel["id"] != id:
-            continue
-        if title and hotel["title"] != title:
-            continue
-        if name and hotel["name"] != name:
-            continue
-        hotels_.append(hotel)
+    async with async_session_maker() as session:
+        query = select(HotelsOrm)
+        result = await session.execute(query)
+        hotels = result.scalars().all()
+        
+    return hotels
     
-    page = pagination.page
-    per_page = pagination.per_page
+    # page = pagination.page
+    # per_page = pagination.per_page
 
-    N = len(hotels_)
-    if N > page * per_page:
-        is_page = True
-    else:
-        is_page = False
+    # N = len(hotels_)
+    # if N > page * per_page:
+    #     is_page = True
+    # else:
+    #     is_page = False
 
-    if is_page:
-        response = hotels_[(page - 1) * per_page:][:per_page]
-    else:
-        response = {"Error": f"No page {page}"}
+    # if is_page:
+    #     response = hotels_[(page - 1) * per_page:][:per_page]
+    # else:
+    #     response = {"Error": f"No page {page}"}
 
-    return response
+    # return response
 
 
 @router.delete("/{hotel_id}")
@@ -59,16 +50,29 @@ def delete_hotel(hotel_id: int):
 
 
 @router.post("")
-def create_hotel(
-    title: str = Body(embed = True),
-    name: str = Body(embed = True)
-):
-    global hotels
-    hotels.append({
-        "id": hotels[-1]["id"] + 1,
-        "title": title,
-        "name": name
-    })
+async def create_hotel(hotel_data: Hotel = Body(openapi_examples={
+    "1": {
+        "summary": "Paris",
+        "value": {
+            "title": "Hotel Paris 3 stars",
+            "location": "Efeltower str., 32",
+        }
+    },
+    "2": {
+        "summary": "Dubai",
+        "value": {
+            "title": "Hotel Abudabi 5 stars",
+            "location": "Sand str., 1",
+        }
+    }
+})):
+    
+    async with async_session_maker() as session:
+        add_hotel_stmt = insert(HotelsOrm).values(**hotel_data.model_dump())
+        # print(add_hotel_stmt.compile(engine, compile_kwargs={"literal_binds": True}))
+        await session.execute(add_hotel_stmt)
+        await session.commit()
+    
     return {"status": "OK"}
 
 
