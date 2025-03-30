@@ -1,7 +1,7 @@
 from typing import List
 from fastapi import APIRouter, Query, Body
-from shemas import Hotel, Error
-from dependencies import PaginationDep
+from src.shemas.hotels import Hotel, Error
+from src.api.dependencies import PaginationDep
 
 router = APIRouter(prefix="/hotels", tags=["Отели"])
 
