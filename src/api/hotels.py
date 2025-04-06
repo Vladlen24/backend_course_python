@@ -18,28 +18,22 @@ async def get_hotels(
     title: str | None = Query(None, description="Hotel title"),
 ) -> List[Hotel] | Error:
     
+    per_page = pagination.per_page or 5
     async with async_session_maker() as session:
         query = select(HotelsOrm)
+        if id:
+            query = query.filter_by(id=id)
+        if title:
+            query = query.filter_by(title=title)
+        query = (
+            query    
+            .limit(per_page)
+            .offset((pagination.page - 1) * per_page)
+        )
         result = await session.execute(query)
         hotels = result.scalars().all()
         
     return hotels
-    
-    # page = pagination.page
-    # per_page = pagination.per_page
-
-    # N = len(hotels_)
-    # if N > page * per_page:
-    #     is_page = True
-    # else:
-    #     is_page = False
-
-    # if is_page:
-    #     response = hotels_[(page - 1) * per_page:][:per_page]
-    # else:
-    #     response = {"Error": f"No page {page}"}
-
-    # return response
 
 
 @router.delete("/{hotel_id}")

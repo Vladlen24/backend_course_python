@@ -1,3 +1,7 @@
 venv/*
 __pycache__/*
 .env
+src/api/__pycache__/*
+src/models/__pycache__/*
+src/shemas/__pycache__/*
+src/__pycache__/*
