@@ -33,10 +33,10 @@ async def get_hotels(
 async def delete_hotel(hotel_id: int):
     
     async with async_session_maker() as session:
-        await HotelsRepository(session).delete(hotel_id)
+        status = await HotelsRepository(session).delete(id=hotel_id)
         await session.commit()
     
-    return {"status": "OK"}
+    return status
 
 
 @router.post("")
@@ -70,10 +70,10 @@ async def edit_full_hotel(
     hotel_data: Hotel = Body()
 ):
     async with async_session_maker() as session:
-        await HotelsRepository(session).edit(hotel_id, hotel_data)
+        status = await HotelsRepository(session).edit(hotel_data, id=hotel_id)
         await session.commit()
 
-    return {"status": "OK"}
+    return status
 
 
 @router.patch("/{hotel_id}")
