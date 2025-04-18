@@ -41,13 +41,15 @@ class BaseRepository:
         N_objects = len(objects_to_edit.scalars().all())
         if N_objects == 0:
             result = JSONResponse(status_code=status.HTTP_404_NOT_FOUND, content=None)
+        
         elif N_objects > 1:
             result = JSONResponse(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, content=None)
+        
         elif N_objects == 1:
             statement = (
                 update(self.model)
-                .where(self.model.id == filter_by['id'])
-                .values(data.model_dump())
+                .filter_by(**filter_by)
+                .values(**data.model_dump())
             )
             await self.session.execute(statement)
             
@@ -65,14 +67,13 @@ class BaseRepository:
         N_objects = len(objects_to_edit.scalars().all())
         if N_objects == 0:
             result = JSONResponse(status_code=status.HTTP_404_NOT_FOUND, content=None)
+        
         elif N_objects > 1:
             result = JSONResponse(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, content=None)
+        
         elif N_objects == 1:
-            statement = (
-                delete(self.model)
-                .where(self.model.id == filter_by['id'])
-            )
-            await self.session.execute(statement)
+            delete_statement = delete(self.model).filter_by(**filter_by)
+            await self.session.execute(delete_statement)
             
             result = JSONResponse(status_code=status.HTTP_200_OK, content=None)
             
