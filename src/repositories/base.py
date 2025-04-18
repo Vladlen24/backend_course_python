@@ -26,19 +26,19 @@ class BaseRepository:
     async def add(self, data: BaseModel):
         statement = insert(self.model).values(data.model_dump()).returning(self.model)
         result = await self.session.execute(statement)
-        # statement = insert(self.model).returning(self.model)
-        # result = await self.session.scalars(statement, data.model_dump())
 
         return result.scalars().one()
         
         
-    async def edit(self, data: BaseModel, **filter_by) -> None:
+    async def edit(self, data: BaseModel, exclude_unset: bool = False, **filter_by) -> None:
         query = (
             select(self.model)
             .where(self.model.id == filter_by['id'])
         )
         objects_to_edit = await self.session.execute(query)
+        
         N_objects = len(objects_to_edit.scalars().all())
+        
         if N_objects == 0:
             result = JSONResponse(status_code=status.HTTP_404_NOT_FOUND, content=None)
         
@@ -49,7 +49,7 @@ class BaseRepository:
             statement = (
                 update(self.model)
                 .filter_by(**filter_by)
-                .values(**data.model_dump())
+                .values(**data.model_dump(exclude_unset=exclude_unset))
             )
             await self.session.execute(statement)
             

@@ -1,13 +1,10 @@
 from typing import List
 from fastapi import APIRouter, Query, Body
-from sqlalchemy import insert, select, func
 
-from src.models.hotels import HotelsOrm
-from src.shemas.hotels import Hotel, Error
+from src.shemas.hotels import Hotel, HotelPATCH, Error
 from src.api.dependencies import PaginationDep
 from src.database import async_session_maker, engine
 from src.repositories.hotels import HotelsRepository
-from src.repositories.base import BaseRepository
 
 router = APIRouter(prefix="/hotels", tags=["Отели"])
 
@@ -77,17 +74,12 @@ async def edit_full_hotel(
 
 
 @router.patch("/{hotel_id}")
-def edit_partially_hotel(
+async def edit_partially_hotel(
     hotel_id: int,
-    title: str | None = Body(None, embed=True),
-    name: str | None = Body(None, embed=True)
+    hotel_data: HotelPATCH = Body()
 ):
-    global hotels
-    for hotel in hotels:
-        if hotel["id"] == hotel_id:
-            if title:
-                hotel["title"] = title
-            if name: 
-                hotel["name"] = name
+    async with async_session_maker() as session:
+        status = await HotelsRepository(session).edit(hotel_data, exclude_unset=True, id=hotel_id)
+        await session.commit()
 
-    return {"status": "OK"}
+    return status
