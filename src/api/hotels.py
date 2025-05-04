@@ -1,7 +1,7 @@
 from typing import List
 from fastapi import APIRouter, Query, Body
 
-from src.shemas.hotels import Hotel, HotelPATCH, Error
+from src.shemas.hotels import Hotel, HotelAdd, HotelPATCH, Error
 from src.api.dependencies import PaginationDep
 from src.database import async_session_maker, engine
 from src.repositories.hotels import HotelsRepository
@@ -19,15 +19,17 @@ async def get_hotels(
     
     per_page = pagination.per_page or 5
     async with async_session_maker() as session:
-        return await HotelsRepository(session).get_all(location=location,
+        result = await HotelsRepository(session).get_all(location=location,
                                                        title=title,
                                                        limit=per_page,
                                                        offset=(pagination.page - 1) * per_page
                                                        )
+        
+    return result
 
 
 @router.get("/{hotel_id}")
-async def get_hotel(hotel_id: int):
+async def get_hotel(hotel_id: int) -> Hotel | None:
     async with async_session_maker() as session:
         result = await HotelsRepository(session).get_one_or_none(id=hotel_id)
     
@@ -45,7 +47,7 @@ async def delete_hotel(hotel_id: int):
 
 
 @router.post("")
-async def create_hotel(hotel_data: Hotel = Body(openapi_examples={
+async def create_hotel(hotel_data: HotelAdd = Body(openapi_examples={
     "1": {
         "summary": "Paris",
         "value": {
@@ -72,7 +74,7 @@ async def create_hotel(hotel_data: Hotel = Body(openapi_examples={
 @router.put("/{hotel_id}")
 async def edit_full_hotel(
     hotel_id: int,
-    hotel_data: Hotel = Body()
+    hotel_data: HotelAdd = Body()
 ):
     async with async_session_maker() as session:
         status = await HotelsRepository(session).edit(hotel_data, id=hotel_id)
