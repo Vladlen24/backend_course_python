@@ -1,30 +1,21 @@
-from datetime import datetime, timedelta, timezone
-from fastapi import APIRouter, HTTPException
 
-from passlib.context import CryptContext
-import jwt
+import json
+from fastapi import APIRouter, HTTPException, Response, Request
+from starlette.requests import Request
+
 
 from src.shemas.users import UserAddRequest, UserAdd
 from src.database import async_session_maker
 from src.repositories.users import UsersRepository
+from src.services.auth import AuthService
 
 router = APIRouter(prefix="/auth", tags=["Authentication & authorization"])
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-SECRET_KEY = "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
-
-
-def verify_password(plain_password, hashed_password):
-    return pwd_context.verify(plain_password, hashed_password)
 
 
 @router.post("/register")
 async def register_user(data: UserAddRequest):
     
-    hashed_password = pwd_context.hash(data.password)
+    hashed_password = AuthService().hash_password(data.password)
     new_data = UserAdd(login=data.login, hashed_password=hashed_password)
     async with async_session_maker() as session:
         await UsersRepository(session).add(new_data)
@@ -33,23 +24,19 @@ async def register_user(data: UserAddRequest):
     return {"status": "OK"}
 
 
-def create_access_token(data: dict) -> str:
-    to_encode = data.copy()
-    expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode |= {"exp": expire}
-    encode_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return encode_jwt
-
-
 @router.post("/login")
-async def login_uer(
+async def login_user(
     data: UserAddRequest,
+    response: Response,
 ):
     async with async_session_maker() as session:
-        user = await UsersRepository(session).get_user_with_hashed_password(email=data.email)
+        user = await UsersRepository(session).get_user_with_hashed_password(login=data.login)
         if not user:
             raise HTTPException(status_code=401, detail="Пользователь с таким e-mail не найден")
-        if not verify_password(data.password, user.hashed_password):
+        if not AuthService().verify_password(data.password, user.hashed_password):
             raise HTTPException(status_code=401, detail="Неверно введен пароль пользователя")
-        access_token = create_access_token({"user_id": user.id})
-        return access_token
+        access_token = AuthService().create_access_token({"user_id": user.id})
+        response.set_cookie("access_token", access_token)
+        return {"access_token": access_token}
+    
+    
