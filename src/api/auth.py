@@ -40,14 +40,18 @@ async def login_user(
         return {"access_token": access_token}
     
     
-@router.post("/only_auth")
+@router.post("/me")
 async def only_auth(
     request: Request,
 ):
-    coockies = request.cookies
-    if "access_token" not in coockies.keys():
-        access_token = None
-    else:
-        access_token = coockies["access_token"]
+    access_token = request.cookies.get("access_token", None)
     
     return access_token
+
+
+@router.post("/logout")
+async def login_user(
+    response: Response,
+):
+    response.set_cookie("access_token", None)
+    return {"status": "OK"}
