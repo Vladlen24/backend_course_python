@@ -1,6 +1,8 @@
 from typing import Annotated
-from fastapi import Query, Depends
+from fastapi import HTTPException, Query, Depends, Request
 from pydantic import BaseModel
+
+from services.auth import AuthService
 
 
 class PaginatationParams(BaseModel):
@@ -8,3 +10,18 @@ class PaginatationParams(BaseModel):
     per_page: Annotated[int | None, Query(None, ge=1, lt=30, description="Number of hotels per page")]
 
 PaginationDep = Annotated[PaginatationParams, Depends()]
+
+
+def get_token(request: Request) -> str:
+    token = request.cookies.get("access_token", None)
+    if not token:
+        raise HTTPException(status_code=401, detail="Отсутствует токен")
+    return token
+
+def get_current_user_id(token: str = Depends(get_token)) -> int:
+    
+    data = AuthService().decode_token(token)
+    return data["user_id"]
+    
+    
+UserIdDep = Annotated[int, Depends(get_current_user_id)]
