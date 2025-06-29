@@ -53,5 +53,5 @@ async def only_auth(
 async def login_user(
     response: Response,
 ):
-    response.set_cookie("access_token", None)
+    response.delete_cookie("access_token")
     return {"status": "OK"}
